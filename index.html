@@ -1705,6 +1705,25 @@
       return { score, tier, advice };
     }
 
+    const SALES_WHATSAPP_CONTACTS = [
+      { name: 'Amirul', phone: '601127202418' },
+      { name: 'Ceksu', phone: '601161113646' }
+    ];
+
+    // Rotasi bergilir per-browser: simpan giliran seterusnya secara setempat.
+    // Untuk imbangan global merentas semua pelawat, perlukan backend/server-side router.
+    function getNextSalesContact() {
+      const key = 'zasma_sales_whatsapp_rotation_v1';
+      let index = 0;
+      try {
+        index = Number.parseInt(localStorage.getItem(key) || '0', 10) || 0;
+        localStorage.setItem(key, String((index + 1) % SALES_WHATSAPP_CONTACTS.length));
+      } catch (e) {
+        index = Math.floor(Math.random() * SALES_WHATSAPP_CONTACTS.length);
+      }
+      return SALES_WHATSAPP_CONTACTS[index % SALES_WHATSAPP_CONTACTS.length];
+    }
+
     async function sendToCRM(payload) {
       const url = window.ZASMA_TRACKING_CONFIG.CRM_WEBHOOK_URL;
       if (!url) return { saved: false, reason: 'no_backend_configured' };
@@ -1785,10 +1804,6 @@
         <li><span>Sesi Pilihan</span><strong>${formState.consultMethod}</strong></li>
       `;
 
-      document.getElementById('crmStatusNote').textContent = crmRes.saved
-        ? 'Rekod penilaian anda telah disimpan ke sistem ZASMA HOME.'
-        : 'Sila klik butang WhatsApp di bawah untuk menghantar ringkasan ini terus kepada pasukan konsultasi ZASMA HOME.';
-
       const waText = `Salam pasukan ZASMA HOME, saya telah melengkapkan penilaian bina rumah:\n` +
         `• Nama: ${formState.custName}\n` +
         `• Status Tanah: ${formState.landStatus}\n` +
@@ -1800,8 +1815,12 @@
         `• Jangkaan Mula: ${formState.timeline}\n` +
         `• Pilihan Sesi: ${formState.consultMethod}\n` +
         `[Penilaian: ${tier}]`;
-
-      document.getElementById('finalWaBtn').href = `https://zasmahome23.wasap.click/?text=${encodeURIComponent(waText)}`;
+      const waContact = getNextSalesContact();
+      document.getElementById('finalWaBtn').href = `https://wa.me/${waContact.phone}?text=${encodeURIComponent(waText)}`;
+      document.getElementById('finalWaBtn').textContent = `WhatsApp ${waContact.name} — Tempah Konsultasi →`;
+      document.getElementById('crmStatusNote').textContent = crmRes.saved
+        ? 'Rekod penilaian anda telah disimpan ke sistem ZASMA HOME. Anda juga boleh terus hubungi staf jualan di WhatsApp.'
+        : `Borang ini belum disambungkan ke CRM. Untuk pastikan pertanyaan sampai, tekan butang WhatsApp ${waContact.name} di bawah dan hantar mesej yang telah disediakan.`;
     });
 
     document.getElementById('resetWizardBtn').addEventListener('click', () => {
